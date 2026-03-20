@@ -1,3 +1,11 @@
+// Package mhurl parses URLs support multiple hosts.
+//
+// Copy and modify from https://github.com/golang/go/blob/go1.26.1/src/net/url/url.go
+// The reason is that the origin `Parse()` func does not support multiple hosts in the Host part after Go 1.26.
+// See the original issue for more details:
+//
+//	https://github.com/golang/go/issues/75859
+//	https://github.com/golang/go/issues/78077
 package mhurl
 
 import (
@@ -330,6 +338,18 @@ func parseAuthority(scheme, authority string) (user *neturl.Userinfo, host strin
 // parseHost parses host as an authority without user
 // information. That is, as host[:port].
 func parseHost(scheme, host string) (string, error) {
+	var hosts []string
+	for _, h := range strings.Split(host, ",") {
+		result, err := _parseHost(scheme, h)
+		if err != nil {
+			return "", err
+		}
+		hosts = append(hosts, result)
+	}
+	return strings.Join(hosts, ","), nil
+}
+
+func _parseHost(scheme, host string) (string, error) {
 	if openBracketIdx := strings.LastIndex(host, "["); openBracketIdx > 0 {
 		return "", errors.New("invalid IP-literal")
 	} else if openBracketIdx == 0 {
